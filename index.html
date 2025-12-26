@@ -4,8 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>4x6 Shipping Label Generator</title>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <style>
         * { box-sizing: border-box; margin: 0; padding: 0; }
         body { font-family: Arial, sans-serif; background: #f0f0f0; padding: 20px; }
@@ -13,18 +11,19 @@
         .controls { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         h1 { font-size: 24px; margin-bottom: 16px; color: #333; }
         .button-group { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 16px; }
-        button { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; display: flex; align-items: center; gap: 8px; }
+        button { background: #007bff; color: white; border: none; padding: 10px 16px; border-radius: 4px; cursor: pointer; font-size: 14px; font-weight: 500; }
         button:hover { background: #0056b3; }
-        button.secondary { background: #6c757d; }
-        button.secondary:hover { background: #545b62; }
-        button.success { background: #28a745; }
-        button.success:hover { background: #218838; }
-        button.danger { background: #dc3545; }
-        button.danger:hover { background: #c82333; }
-        button.warning { background: #fd7e14; }
-        button.warning:hover { background: #e8590c; }
-        button.pink { background: #e83e8c; }
-        button.pink:hover { background: #d63384; }
+        button:active { transform: scale(0.98); }
+        .btn-success { background: #28a745; }
+        .btn-success:hover { background: #218838; }
+        .btn-warning { background: #fd7e14; }
+        .btn-warning:hover { background: #e8590c; }
+        .btn-danger { background: #dc3545; }
+        .btn-danger:hover { background: #c82333; }
+        .btn-secondary { background: #6c757d; }
+        .btn-secondary:hover { background: #545b62; }
+        .btn-pink { background: #e83e8c; }
+        .btn-pink:hover { background: #d63384; }
         .label-selector { display: flex; align-items: center; gap: 12px; margin-top: 16px; padding-top: 16px; border-top: 1px solid #e0e0e0; }
         .label-selector select { padding: 8px 12px; border: 1px solid #ccc; border-radius: 4px; font-size: 14px; }
         .edit-panel { background: white; border-radius: 8px; padding: 24px; margin-bottom: 24px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
@@ -63,13 +62,13 @@
             <h1>4x6 Shipping Label Generator</h1>
             <div class="button-group">
                 <button onclick="document.getElementById('fileInput').click()">📤 Upload Excel</button>
-                <button class="success" onclick="downloadTemplate()">📥 Download Template</button>
-                <button class="warning" onclick="downloadHTML()">💾 Download HTML</button>
-                <button class="pink" onclick="exportToPDF()">📄 Export to PDF</button>
-                <button class="secondary" onclick="window.print()">🖨️ Print</button>
+                <button class="btn-success" onclick="downloadTemplate()">📥 Template</button>
+                <button class="btn-warning" onclick="downloadHTML()">💾 Download HTML</button>
+                <button class="btn-pink" onclick="exportToPDF()">📄 Export PDF</button>
+                <button class="btn-secondary" onclick="window.print()">🖨️ Print</button>
                 <button onclick="toggleEdit()">✏️ <span id="editBtnText">Edit</span></button>
-                <button class="success" onclick="addLabel()">➕ Add</button>
-                <button class="danger" onclick="deleteLabel()" id="deleteBtn">🗑️ Delete</button>
+                <button class="btn-success" onclick="addLabel()">➕ Add</button>
+                <button class="btn-danger" onclick="deleteLabel()" id="deleteBtn" style="display:none;">🗑️ Delete</button>
             </div>
             <input type="file" id="fileInput" accept=".xlsx,.xls" class="hidden" onchange="handleExcelUpload(event)">
             <div class="label-selector">
@@ -117,22 +116,207 @@
             </div>
         </div>
     </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
     <script>
-        let labels = [{itemNumber:'SL-CC002-437Q',description:'32 Oz CH Ceramic Hydro Coat',upc:'194383038054',caseQty:'6 pcs',innerQty:'1 pcs',netWeight:'8.93 kg',grossWeight:'8.93 kg',dimensions:'27.5 x 18.7 x 32 cm',cbm:'0.014',vendorId:'670',madeIn:'U.S.A.',barcode:'20194383042109'}];
-        let currentIndex=0,editMode=false;
-        function renderLabel(){const l=labels[currentIndex];document.getElementById('itemNumber').textContent=l.itemNumber;document.getElementById('description').textContent=l.description;document.getElementById('upc').textContent=l.upc;document.getElementById('caseQty').textContent=l.caseQty;document.getElementById('innerQty').textContent=l.innerQty;document.getElementById('netWeight').textContent=l.netWeight;document.getElementById('grossWeight').textContent=l.grossWeight;document.getElementById('dimensions').textContent=l.dimensions;document.getElementById('cbm').textContent=l.cbm;document.getElementById('vendorId').textContent=l.vendorId;document.getElementById('madeIn').textContent=l.madeIn;document.getElementById('barcodeNumber').textContent=l.barcode;if(window.JsBarcode){try{JsBarcode("#barcode",l.barcode,{format:"ITF14",width:2,height:50,displayValue:false,margin:0,background:"#fff",lineColor:"#000"})}catch(e){console.error(e)}}updateSelector();if(editMode)renderEditPanel()}
-        function updateSelector(){const s=document.getElementById('labelSelect');s.innerHTML='';labels.forEach((_,i)=>{const o=document.createElement('option');o.value=i;o.textContent=`Label ${i+1}`;o.selected=i===currentIndex;s.appendChild(o)});document.getElementById('labelCount').textContent=`of ${labels.length}`;document.getElementById('deleteBtn').style.display=labels.length>1?'flex':'none'}
-        function changeLabel(i){currentIndex=parseInt(i);renderLabel()}
-        function toggleEdit(){editMode=!editMode;document.getElementById('editPanel').classList.toggle('hidden');document.getElementById('editBtnText').textContent=editMode?'View':'Edit';if(editMode)renderEditPanel()}
-        function renderEditPanel(){const g=document.getElementById('editGrid');g.innerHTML='';const l=labels[currentIndex];Object.keys(l).forEach(k=>{const f=document.createElement('div');f.className='edit-field';f.innerHTML=`<label>${k.replace(/([A-Z])/g,' $1').trim()}</label><input type="text" value="${l[k]}" onchange="updateField('${k}',this.value)">`;g.appendChild(f)})}
-        function updateField(f,v){labels[currentIndex][f]=v;renderLabel()}
-        function addLabel(){labels.push({...labels[currentIndex]});currentIndex=labels.length-1;renderLabel()}
-        function deleteLabel(){if(labels.length===1)return;labels.splice(currentIndex,1);currentIndex=Math.max(0,currentIndex-1);renderLabel()}
-        function handleExcelUpload(e){const f=e.target.files[0];if(!f)return;const r=new FileReader();r.onload=e=>{const d=new Uint8Array(e.target.result);const w=XLSX.read(d,{type:'array'});const s=w.Sheets[w.SheetNames[0]];const j=XLSX.utils.sheet_to_json(s);labels=j.map(r=>({itemNumber:r['Item Number']||r.itemNumber||'',description:r.Description||r.description||'',upc:r.UPC||r.upc||'',caseQty:r['Case Qty']||r.caseQty||'',innerQty:r['Inner Qty']||r.innerQty||'',netWeight:r['Net Weight']||r.netWeight||'',grossWeight:r['Gross Weight']||r.grossWeight||'',dimensions:r.Dimensions||r.dimensions||'',cbm:r.CBM||r.cbm||'',vendorId:r['Vendor ID']||r.vendorId||'',madeIn:r['Made in']||r.madeIn||'',barcode:r.Barcode||r.barcode||''}));currentIndex=0;renderLabel()};r.readAsArrayBuffer(f)}
-        function downloadTemplate(){const t=[{'Item Number':'SL-CC002-437Q',Description:'32 Oz CH Ceramic Hydro Coat',UPC:'194383038054','Case Qty':'6 pcs','Inner Qty':'1 pcs','Net Weight':'8.93 kg','Gross Weight':'8.93 kg',Dimensions:'27.5 x 18.7 x 32 cm',CBM:'0.014','Vendor ID':'670','Made in':'U.S.A.',Barcode:'20194383042109'}];const w=XLSX.utils.json_to_sheet(t);const b=XLSX.utils.book_new();XLSX.utils.book_append_sheet(b,w,'Labels');XLSX.writeFile(b,'shipping_label_template.xlsx')}
-        function downloadHTML(){const l=labels[currentIndex];const h=`<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Label</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script><style>*{margin:0;padding:0;box-sizing:border-box}@page{size:4in 6in;margin:0}html,body{width:4in;height:6in;overflow:hidden}body{font-family:Arial,sans-serif;background:#f0f0f0}.label{width:4in;height:6in;padding:.25in .3in;background:#fff;display:flex;flex-direction:column;position:relative}.section{margin-bottom:.15in}.section-title{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;margin-bottom:.04in;letter-spacing:.3px}.item-number{font-size:18pt;font-weight:bold;line-height:1.1}.description{font-size:14pt;line-height:1.15;font-weight:500}.upc-text{font-size:12pt;line-height:1.1;font-weight:500}.info-grid{display:grid;grid-template-columns:auto 1fr;gap:.08in .2in;font-size:12pt;line-height:1.3}.info-label{font-weight:700}.info-value{font-weight:500}.barcode-section{text-align:center;margin-top:auto;padding-top:.08in}.barcode-container{display:flex;justify-content:center;margin-bottom:.06in}.barcode-wrapper{border-top:4.8px solid #000;border-bottom:4.8px solid #000;display:inline-block;background:#fff;padding:0 10px}.barcode-number{font-size:11pt;font-weight:700;letter-spacing:1.5px}@media print{html,body{width:4in!important;height:6in!important}}</style></head><body><div class="label"><div class="section"><div class="section-title">Item Number</div><div class="item-number">${l.itemNumber}</div></div><div class="section"><div class="section-title">Description</div><div class="description">${l.description}</div></div><div class="section"><div class="section-title">UPC</div><div class="upc-text">${l.upc}</div></div><div class="section"><div class="info-grid"><span class="info-label">Case Qty:</span><span class="info-value">${l.caseQty}</span><span class="info-label">Inner Qty:</span><span class="info-value">${l.innerQty}</span><span class="info-label">Net Weight:</span><span class="info-value">${l.netWeight}</span><span class="info-label">Gross Weight:</span><span class="info-value">${l.grossWeight}</span><span class="info-label">Dimensions:</span><span class="info-value">${l.dimensions}</span><span class="info-label">CBM:</span><span class="info-value">${l.cbm}</span><span class="info-label">Vendor ID:</span><span class="info-value">${l.vendorId}</span><span class="info-label">Made in:</span><span class="info-value">${l.madeIn}</span></div></div><div class="barcode-section"><div class="barcode-container"><div class="barcode-wrapper"><svg id="barcode"></svg></div></div><div class="barcode-number">${l.barcode}</div></div></div><script>window.onload=()=>{if(window.JsBarcode)JsBarcode("#barcode","${l.barcode}",{format:"ITF14",width:2,height:50,displayValue:false,margin:0,background:"#fff",lineColor:"#000"})}</script></body></html>`;const b=new Blob([h],{type:'text/html'});const u=URL.createObjectURL(b);const a=document.createElement('a');a.href=u;a.download=`label_${l.itemNumber}.html`;a.click();URL.revokeObjectURL(u)}
-        function exportToPDF(){alert('To export as PDF:\n\n1. Click "Download HTML"\n2. Open HTML file in browser\n3. Press Ctrl+P (Cmd+P on Mac)\n4. Choose "Save as PDF"\n5. Set paper size to 4x6 inches\n6. Set scale to "Actual size" (100%)\n7. Set margins to "None"\n8. Save')}
-        window.onload=()=>renderLabel();
+        var labels = [{
+            itemNumber: 'SL-CC002-437Q',
+            description: '32 Oz CH Ceramic Hydro Coat',
+            upc: '194383038054',
+            caseQty: '6 pcs',
+            innerQty: '1 pcs',
+            netWeight: '8.93 kg',
+            grossWeight: '8.93 kg',
+            dimensions: '27.5 x 18.7 x 32 cm',
+            cbm: '0.014',
+            vendorId: '670',
+            madeIn: 'U.S.A.',
+            barcode: '20194383042109'
+        }];
+        
+        var currentIndex = 0;
+        var editMode = false;
+
+        function renderLabel() {
+            var label = labels[currentIndex];
+            document.getElementById('itemNumber').textContent = label.itemNumber;
+            document.getElementById('description').textContent = label.description;
+            document.getElementById('upc').textContent = label.upc;
+            document.getElementById('caseQty').textContent = label.caseQty;
+            document.getElementById('innerQty').textContent = label.innerQty;
+            document.getElementById('netWeight').textContent = label.netWeight;
+            document.getElementById('grossWeight').textContent = label.grossWeight;
+            document.getElementById('dimensions').textContent = label.dimensions;
+            document.getElementById('cbm').textContent = label.cbm;
+            document.getElementById('vendorId').textContent = label.vendorId;
+            document.getElementById('madeIn').textContent = label.madeIn;
+            document.getElementById('barcodeNumber').textContent = label.barcode;
+            
+            if (window.JsBarcode) {
+                try {
+                    JsBarcode("#barcode", label.barcode, {
+                        format: "ITF14",
+                        width: 2,
+                        height: 50,
+                        displayValue: false,
+                        margin: 0,
+                        background: "#ffffff",
+                        lineColor: "#000000"
+                    });
+                } catch (e) {
+                    console.error('Barcode error:', e);
+                }
+            }
+            
+            updateSelector();
+            if (editMode) renderEditPanel();
+        }
+
+        function updateSelector() {
+            var select = document.getElementById('labelSelect');
+            select.innerHTML = '';
+            for (var i = 0; i < labels.length; i++) {
+                var option = document.createElement('option');
+                option.value = i;
+                option.textContent = 'Label ' + (i + 1);
+                if (i === currentIndex) option.selected = true;
+                select.appendChild(option);
+            }
+            document.getElementById('labelCount').textContent = 'of ' + labels.length;
+            document.getElementById('deleteBtn').style.display = labels.length > 1 ? 'inline-block' : 'none';
+        }
+
+        function changeLabel(index) {
+            currentIndex = parseInt(index);
+            renderLabel();
+        }
+
+        function toggleEdit() {
+            editMode = !editMode;
+            var panel = document.getElementById('editPanel');
+            if (editMode) {
+                panel.classList.remove('hidden');
+                document.getElementById('editBtnText').textContent = 'View';
+                renderEditPanel();
+            } else {
+                panel.classList.add('hidden');
+                document.getElementById('editBtnText').textContent = 'Edit';
+            }
+        }
+
+        function renderEditPanel() {
+            var grid = document.getElementById('editGrid');
+            grid.innerHTML = '';
+            var label = labels[currentIndex];
+            
+            for (var key in label) {
+                var field = document.createElement('div');
+                field.className = 'edit-field';
+                var fieldLabel = key.replace(/([A-Z])/g, ' $1').trim();
+                field.innerHTML = '<label>' + fieldLabel + '</label><input type="text" value="' + label[key] + '" onchange="updateField(\'' + key + '\', this.value)">';
+                grid.appendChild(field);
+            }
+        }
+
+        function updateField(field, value) {
+            labels[currentIndex][field] = value;
+            renderLabel();
+        }
+
+        function addLabel() {
+            var newLabel = {};
+            for (var key in labels[currentIndex]) {
+                newLabel[key] = labels[currentIndex][key];
+            }
+            labels.push(newLabel);
+            currentIndex = labels.length - 1;
+            renderLabel();
+        }
+
+        function deleteLabel() {
+            if (labels.length === 1) return;
+            labels.splice(currentIndex, 1);
+            currentIndex = Math.max(0, currentIndex - 1);
+            renderLabel();
+        }
+
+        function handleExcelUpload(event) {
+            var file = event.target.files[0];
+            if (!file) return;
+
+            var reader = new FileReader();
+            reader.onload = function(e) {
+                var data = new Uint8Array(e.target.result);
+                var workbook = XLSX.read(data, { type: 'array' });
+                var firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+                var jsonData = XLSX.utils.sheet_to_json(firstSheet);
+
+                labels = jsonData.map(function(row) {
+                    return {
+                        itemNumber: row['Item Number'] || row['itemNumber'] || '',
+                        description: row['Description'] || row['description'] || '',
+                        upc: row['UPC'] || row['upc'] || '',
+                        caseQty: row['Case Qty'] || row['caseQty'] || '',
+                        innerQty: row['Inner Qty'] || row['innerQty'] || '',
+                        netWeight: row['Net Weight'] || row['netWeight'] || '',
+                        grossWeight: row['Gross Weight'] || row['grossWeight'] || '',
+                        dimensions: row['Dimensions'] || row['dimensions'] || '',
+                        cbm: row['CBM'] || row['cbm'] || '',
+                        vendorId: row['Vendor ID'] || row['vendorId'] || '',
+                        madeIn: row['Made in'] || row['madeIn'] || '',
+                        barcode: row['Barcode'] || row['barcode'] || ''
+                    };
+                });
+
+                currentIndex = 0;
+                renderLabel();
+            };
+            reader.readAsArrayBuffer(file);
+        }
+
+        function downloadTemplate() {
+            var template = [{
+                'Item Number': 'SL-CC002-437Q',
+                'Description': '32 Oz CH Ceramic Hydro Coat',
+                'UPC': '194383038054',
+                'Case Qty': '6 pcs',
+                'Inner Qty': '1 pcs',
+                'Net Weight': '8.93 kg',
+                'Gross Weight': '8.93 kg',
+                'Dimensions': '27.5 x 18.7 x 32 cm',
+                'CBM': '0.014',
+                'Vendor ID': '670',
+                'Made in': 'U.S.A.',
+                'Barcode': '20194383042109'
+            }];
+
+            var ws = XLSX.utils.json_to_sheet(template);
+            var wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, 'Labels');
+            XLSX.writeFile(wb, 'shipping_label_template.xlsx');
+        }
+
+        function downloadHTML() {
+            var label = labels[currentIndex];
+            var html = '<!DOCTYPE html><html><head><meta charset="UTF-8"><title>Label</title><script src="https://cdnjs.cloudflare.com/ajax/libs/jsbarcode/3.11.5/JsBarcode.all.min.js"></script><style>*{margin:0;padding:0;box-sizing:border-box}@page{size:4in 6in;margin:0}html,body{width:4in;height:6in;overflow:hidden}body{font-family:Arial,sans-serif;background:#f0f0f0}.label{width:4in;height:6in;padding:.25in .3in;background:#fff;display:flex;flex-direction:column;position:relative}.section{margin-bottom:.15in}.section-title{font-size:8pt;font-weight:bold;color:#666;text-transform:uppercase;margin-bottom:.04in;letter-spacing:.3px}.item-number{font-size:18pt;font-weight:bold;line-height:1.1}.description{font-size:14pt;line-height:1.15;font-weight:500}.upc-text{font-size:12pt;line-height:1.1;font-weight:500}.info-grid{display:grid;grid-template-columns:auto 1fr;gap:.08in .2in;font-size:12pt;line-height:1.3}.info-label{font-weight:700}.info-value{font-weight:500}.barcode-section{text-align:center;margin-top:auto;padding-top:.08in}.barcode-container{display:flex;justify-content:center;margin-bottom:.06in}.barcode-wrapper{border-top:4.8px solid #000;border-bottom:4.8px solid #000;display:inline-block;background:#fff;padding:0 10px}.barcode-number{font-size:11pt;font-weight:700;letter-spacing:1.5px}@media print{html,body{width:4in!important;height:6in!important}}</style></head><body><div class="label"><div class="section"><div class="section-title">Item Number</div><div class="item-number">' + label.itemNumber + '</div></div><div class="section"><div class="section-title">Description</div><div class="description">' + label.description + '</div></div><div class="section"><div class="section-title">UPC</div><div class="upc-text">' + label.upc + '</div></div><div class="section"><div class="info-grid"><span class="info-label">Case Qty:</span><span class="info-value">' + label.caseQty + '</span><span class="info-label">Inner Qty:</span><span class="info-value">' + label.innerQty + '</span><span class="info-label">Net Weight:</span><span class="info-value">' + label.netWeight + '</span><span class="info-label">Gross Weight:</span><span class="info-value">' + label.grossWeight + '</span><span class="info-label">Dimensions:</span><span class="info-value">' + label.dimensions + '</span><span class="info-label">CBM:</span><span class="info-value">' + label.cbm + '</span><span class="info-label">Vendor ID:</span><span class="info-value">' + label.vendorId + '</span><span class="info-label">Made in:</span><span class="info-value">' + label.madeIn + '</span></div></div><div class="barcode-section"><div class="barcode-container"><div class="barcode-wrapper"><svg id="barcode"></svg></div></div><div class="barcode-number">' + label.barcode + '</div></div></div><script>window.onload=function(){if(window.JsBarcode)JsBarcode("#barcode","' + label.barcode + '",{format:"ITF14",width:2,height:50,displayValue:false,margin:0,background:"#fff",lineColor:"#000"})}</script></body></html>';
+
+            var blob = new Blob([html], { type: 'text/html' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = 'label_' + label.itemNumber + '.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        function exportToPDF() {
+            alert('To export as PDF:\n\n1. Click "Download HTML"\n2. Open the HTML file\n3. Press Ctrl+P (Cmd+P)\n4. Choose "Save as PDF"\n5. Set paper size to 4x6 inches\n6. Set scale to "Actual size"\n7. Save');
+        }
+
+        window.onload = function() {
+            renderLabel();
+        };
     </script>
 </body>
 </html>
